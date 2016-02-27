@@ -1,9 +1,7 @@
 %aksenov364@gmail.com
-%ErMax
-%Sublime
 
 -module(tut1).
--export([hi/0, fac/1, fib/1, member/2, price/1, cost/1]).
+-export([hi/0, fac/1, fib/1, member/2, price/1, cost/1, reduce/3, filter/2]).
 
 hi() ->
 	io:format("Hello world!~n").
@@ -28,3 +26,14 @@ price(pork) -> 300.
 
 cost([]) -> 0;
 cost([{H1, H2}| T]) -> price(H1) * H2 + cost(T).
+
+reduce(_, Start, []) -> Start;
+reduce(F, Start, [H|T]) -> reduce(F, F(Start, H), T).
+
+filter(_, []) -> [];
+filter(F, [H|T]) ->
+    case F(H) of
+        true -> [H|filter(F, T)];
+        false -> filter(F, T)
+    end.
+    
