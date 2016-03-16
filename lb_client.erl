@@ -18,13 +18,13 @@ loop() ->
     end.
     
 connect(User, Pid) ->
-    chat_server ! {connect, Pid, User}.
+    global:send(chat_server, {connect, Pid, User}).
 
 disconnect(Pid) ->
-    chat_server ! {disconnect, Pid}.
+    global:send(chat_server, {disconnect, Pid}).
     
 send(MSG, Pid) ->
-    chat_server ! {msg, Pid, MSG}.
+    global:send(chat_server, {msg, Pid, MSG}).
 
 %c(lb_client).
 %Client1 = lb_client:start_client().
