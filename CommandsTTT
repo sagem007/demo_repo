@@ -1,29 +1,33 @@
 %% CMD
-werl -name serv -setcookie class1
-werl -name h1 -setcookie class1
-werl -name h2 -setcookie class1
-werl -name t -setcookie class1
+werl -name serv@192.168.43.237 -setcookie class1
+werl -name h1@192.168.43.237 -setcookie class1
+werl -name h2@192.168.43.237 -setcookie class1
+werl -name t@192.168.43.237 -setcookie class1
 
 %% cd прописать на всех доп.окнах
 cd("C:/Users/Александр/Documents/GitHub/demo_repo").
 
 %% В управляющем окне
-net_adm:ping('serv@WIN-P85VAOVQJQ6.netgear.com').
-net_adm:ping('h1@WIN-P85VAOVQJQ6.netgear.com').
-net_adm:ping('h2@WIN-P85VAOVQJQ6.netgear.com').
-Server1 = spawn('serv@WIN-P85VAOVQJQ6.netgear.com', ticTacToeServer, loop_main, [db:new()]).
-Room1 = spawn('serv@WIN-P85VAOVQJQ6.netgear.com', ticTacToeServer, loop_room, [db:new(), db:new(), -1]).
+net_adm:ping('serv@192.168.43.237').
+net_adm:ping('h1@192.168.43.237').
+net_adm:ping('h2@192.168.43.237').
+Server1 = spawn('serv@192.168.43.237', ticTacToeServer, loop_main, [db:new()]).
+Room1 = spawn('serv@192.168.43.237', ticTacToeServer, loop_room, [db:new(), db:new(), -1]).
 global:register_name(ticTacToeServer, Server1).
 global:register_name(komnata1, Room1).
 
 %% Клиент 1
-net_adm:ping('serv@WIN-P85VAOVQJQ6.netgear.com').
-Client1 = spawn('h1@WIN-P85VAOVQJQ6.netgear.com', ticTacToeClient, loop_main, []).
+net_adm:ping('serv@192.168.43.237').
+
+%% Клиент 2
+net_adm:ping('serv@192.168.43.237').
+
+%% Клиент 1
+Client1 = spawn('h1@192.168.43.237', ticTacToeClient, loop_main, []).
 ticTacToeClient:enter_room(komnata1, Client1, "vasya").
 
 %% Клиент 2
-net_adm:ping('serv@WIN-P85VAOVQJQ6.netgear.com').
-Client2 = spawn('h2@WIN-P85VAOVQJQ6.netgear.com', ticTacToeClient, loop_main, []).
+Client2 = spawn('h2@192.168.43.237', ticTacToeClient, loop_main, []).
 ticTacToeClient:enter_room(komnata1, Client2, "petya").
 
 %% Ход: Клиент 1

@@ -61,8 +61,18 @@ loop_room(Players, Field, Curr_Player_Pid) ->
                            Curr_Player_Pid1 ! {info_msg, "Your turn"},
                            loop_room(Players, Field2, Curr_Player_Pid1);
                        false ->
-                           Curr_Player_Pid1 ! {info_msg, "Your turn"},
-                           loop_room(Players, Field1, Curr_Player_Pid1)
+                           case (length(Field1) < 9) of
+                               true ->          
+                                   Curr_Player_Pid1 ! {info_msg, "Your turn"},
+                                   loop_room(Players, Field1, Curr_Player_Pid1);
+                               false -> 
+                                   Field3 = db:new(),
+                                   Curr_Player_Pid ! {info_msg, "Game over"},
+                                   Curr_Player_Pid1 ! {info_msg, "Game over"},
+                                   Curr_Player_Pid1 ! {field, Field3},
+                                   Curr_Player_Pid1 ! {info_msg, "Your turn"},
+                                   loop_room(Players, Field3, Curr_Player_Pid1)
+                           end
                    end;              
                true ->
                    Pid ! {info_msg, "Now is not your turn"},
