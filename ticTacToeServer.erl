@@ -1,5 +1,5 @@
 -module(ticTacToeServer).
--export([start_server/0, start_room/1, loop_main/1, loop_room/3, check_field/1]).
+-export([start_server/0, start_room/1, loop_main/1, loop_room/1, check_field/1, do_turn/6, do_enter/5, do_exit/2]).
 
 start_server() ->
     Pid = spawn(ticTacToeServer, loop_main, [db:new()]),
@@ -7,7 +7,7 @@ start_server() ->
     Pid.
 
 start_room(Name) ->
-    Pid = spawn(ticTacToeServer, loop_room, [db:new(), db:new(), -1]),
+    Pid = spawn(ticTacToeServer, loop_room, [{db:new(), db:new(), -1}]),
     global:register_name(Name, Pid),
     Pid.
     
@@ -25,61 +25,73 @@ loop_main(Rooms) ->
             loop_main(Rooms1)
     end.
 
-loop_room(Players, Field, Curr_Player_Pid) ->
+loop_room({Players, Field, Curr_Player_Pid}) ->
     receive
         {enterRoom, Pid, Player} ->
-            if length(Players) < 2 ->
-                   Players1 = db:put(Pid, Player, Players),
-                   Pid ! {info_msg, "Entered"},
-                   Field1 = db:new(),
-                   Curr_Player_Pid1 = Pid,
-                   loop_room(Players1, Field1, Curr_Player_Pid1);
-               true ->
-                   Pid ! {info_msg, "Room is full"},
-                   loop_room(Players, Field, Curr_Player_Pid)
-            end;     
+            State = do_enter(Players, Field, Curr_Player_Pid, Pid, Player),
+            loop_room(State);
         {exitRoom, Pid} ->
-            Players1 = db:delete(Pid, Players),
-            Pid ! {info_msg, "Success exit"},
-            Curr_Player_Pid1 = db:first(Players),
-            Field1 = db:new(),
-            loop_room(Players1, Field1, Curr_Player_Pid1);
+            State = do_exit(Players, Pid),
+            loop_room(State);
         {turn, Pid, [{K, V}|_]} ->
-            if Pid == Curr_Player_Pid ->
-                   Field1 = db:put(K, V, Field),
-                   Curr_Player_Pid ! {info_msg, "Success turn"},   
-                   Curr_Player_Pid1 = db:different(Curr_Player_Pid, Players),
-                   Curr_Player_Pid1 ! {field, Field1},
-                   case check_field(Field1) of
-                       true -> 
-                           Curr_Player_Pid ! {field, Field1},
-                           Curr_Player_Pid ! {info_msg, "You won"},
-                           Curr_Player_Pid1 ! {field, Field1},
-                           Curr_Player_Pid1 ! {info_msg, "You lose"},
-                           Field2 = db:new(),
-                           Curr_Player_Pid1 ! {field, Field2},
-                           Curr_Player_Pid1 ! {info_msg, "Your turn"},
-                           loop_room(Players, Field2, Curr_Player_Pid1);
-                       false ->
-                           case (length(Field1) < 9) of
-                               true ->          
-                                   Curr_Player_Pid1 ! {info_msg, "Your turn"},
-                                   loop_room(Players, Field1, Curr_Player_Pid1);
-                               false -> 
-                                   Field3 = db:new(),
-                                   Curr_Player_Pid ! {info_msg, "Game over"},
-                                   Curr_Player_Pid1 ! {info_msg, "Game over"},
-                                   Curr_Player_Pid1 ! {field, Field3},
-                                   Curr_Player_Pid1 ! {info_msg, "Your turn"},
-                                   loop_room(Players, Field3, Curr_Player_Pid1)
-                           end
-                   end;              
-               true ->
-                   Pid ! {info_msg, "Now is not your turn"},
-                   loop_room(Players, Field, Curr_Player_Pid)
-            end
+            State = do_turn(Players, Field, Curr_Player_Pid, Pid, K, V),
+            loop_room(State)
     end.
     
+do_exit(Players, Pid) ->
+    Players1 = db:delete(Pid, Players),
+    Pid ! {info_msg, "Success exit"},
+    Curr_Player_Pid1 = db:first(Players),
+    Field1 = db:new(),
+    {Players1, Field1, Curr_Player_Pid1}.
+
+do_enter(Players, Field, Curr_Player_Pid, Pid, Player) ->
+    if length(Players) < 2 ->
+           Players1 = db:put(Pid, Player, Players),
+           Pid ! {info_msg, "Entered"},
+           Field1 = db:new(),
+           Curr_Player_Pid1 = Pid,
+           {Players1, Field1, Curr_Player_Pid1};
+       true ->
+           Pid ! {info_msg, "Room is full"},
+           {Players, Field, Curr_Player_Pid}
+    end.   
+
+do_turn(Players, Field, Curr_Player_Pid, Pid, K, V) ->
+    if Pid == Curr_Player_Pid ->
+           Field1 = db:put(K, V, Field),
+           Curr_Player_Pid ! {info_msg, "Success turn"},   
+           Curr_Player_Pid1 = db:different(Curr_Player_Pid, Players),
+           Curr_Player_Pid1 ! {field, Field1},
+           case check_field(Field1) of
+               true -> 
+                   Curr_Player_Pid ! {field, Field1},
+                   Curr_Player_Pid ! {info_msg, "You won"},
+                   Curr_Player_Pid1 ! {field, Field1},
+                   Curr_Player_Pid1 ! {info_msg, "You lose"},
+                   Field2 = db:new(),
+                   Curr_Player_Pid1 ! {field, Field2},
+                   Curr_Player_Pid1 ! {info_msg, "Your turn"},
+                   {Players, Field2, Curr_Player_Pid1};
+               false ->
+                   case (length(Field1) < 9) of
+                       true ->          
+                           Curr_Player_Pid1 ! {info_msg, "Your turn"},
+                           {Players, Field1, Curr_Player_Pid1};
+                       false -> 
+                           Field3 = db:new(),
+                           Curr_Player_Pid ! {info_msg, "Game over"},
+                           Curr_Player_Pid1 ! {info_msg, "Game over"},
+                           Curr_Player_Pid1 ! {field, Field3},
+                           Curr_Player_Pid1 ! {info_msg, "Your turn"},
+                           {Players, Field3, Curr_Player_Pid1}
+                   end
+           end;    
+       true ->
+           Pid ! {info_msg, "Now is not your turn"},
+           {Players, Field, Curr_Player_Pid}
+    end.
+   
 check_field(Field) ->
     One = db:get(1, Field),
     Two = db:get(2, Field),
