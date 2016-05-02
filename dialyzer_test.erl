@@ -27,7 +27,7 @@ find_path(User1, User2, Checked, Result) ->
     case lists:member(User1, Checked) of
 		false ->
             Checked1 = Checked ++ [User1],
-            lists:foreach(fun(X) -> 
+            lists:map(fun(X) -> 
                             find_path(X, User2, Checked1, Result)
                           end, User1#user.friends)
 	end.
