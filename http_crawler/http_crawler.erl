@@ -34,7 +34,7 @@ process_tokens({_, _, Contents}, _) ->
 process_tokens(_, _) -> [].
 
 process_link(W, Parent, Dir, Url) ->
-    FixedUrl = re:replace(re:replace(Url, "<<\"", "", [global,{return,list}]), "\">>", "", [global,{return,list}]),
+    FixedUrl = binary_to_list(Url),
     case get_link_type(FixedUrl) of
         image -> process_image(W, Dir ++ FixedUrl);
         page  -> process_page(W, Dir ++ FixedUrl);
