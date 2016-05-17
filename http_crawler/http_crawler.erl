@@ -2,6 +2,13 @@
 %%% c(http_crawler).
 %%% http_crawler:start().
 
+
+%%% {ok, {{_, RetCode, _}, _, Result}} = httpc:request("http://airwar.ru/image").
+%%% Tree = mochiweb_html:parse(Result).
+%%% Imgs = mochiweb_xpath:execute("//img/@src", Tree).
+%%% Links = mochiweb_xpath:execute("//a/@href", Tree).
+
+
 -module(http_crawler).
 -compile(export_all).
 
@@ -13,31 +20,19 @@ process_page(W, Url) ->
     MyPid = self(),
     case get_url_contents(Url) of
         {ok, Data} ->
-            Tokens = mochiweb_html:parse(Data),
-            Links = lists:flatten(process_tokens(Tokens, [])),
+            Tree = mochiweb_html:parse(Data),
+            Links = lists:flatten(mochiweb_xpath:execute("//a/@href", Tree)),
             Pids = [spawn(fun() -> 
-                            process_link(W, MyPid, Url, Str)
+                            process_link(W, MyPid, Url, binary_to_list(Str))
                           end) || Str <- Links],
             collect(length(Pids));
         _ -> ok
     end.
 
-process_tokens({<<"a">>, Attrs, Contents}, Acc) ->
-    X = lists:keysearch(<<"href">>, 1, Attrs),
-    NewAcc = case X of
-                 {value, {<<"href">>, T}} -> [T | Acc];
-                 _ ->  Acc
-             end,
-    NewAcc ++ [process_tokens(C, []) || C <- Contents];
-process_tokens({_, _, Contents}, _) ->
-    [process_tokens(C, []) || C <- Contents];
-process_tokens(_, _) -> [].
-
 process_link(W, Parent, Dir, Url) ->
-    FixedUrl = binary_to_list(Url),
-    case get_link_type(FixedUrl) of
-        image -> process_image(W, Dir ++ FixedUrl);
-        page  -> process_page(W, Dir ++ FixedUrl);
+    case get_link_type(Url) of
+        image -> process_image(W, Dir ++ Url);
+        page  -> process_page(W, Dir ++ Url);
         _    -> process_other(W, Dir ++ Url)
     end,
     done(Parent).
